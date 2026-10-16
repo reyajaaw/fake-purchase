@@ -1,0 +1,707 @@
+-- Made By AceLuau Here Skids, Enjoy
+local coreGui = cloneref(game:GetService("CoreGui"))
+local guiService = cloneref(game:GetService("GuiService"))
+local userInputService = cloneref(game:GetService("UserInputService"))
+local runService = cloneref(game:GetService("RunService"))
+local tweenService = cloneref(game:GetService("TweenService"))
+local HttpService = game:GetService("HttpService")
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+
+getgenv().UGCs = {}
+
+local isScanning = false
+local isLoopRunning = false
+local fireSpeed = 1
+local skipFreeItems = false
+
+local selectedCategories = {
+    Accessories = false,
+    ClassicClothing = false,
+    LayeredClothing = false,
+    Gears = false,
+    BundlesPackages = false
+}
+
+if coreGui:FindFirstChild("AceSniperUI") then
+    coreGui.AceSniperUI:Destroy()
+end
+
+local COL_BG = Color3.fromRGB(18, 18, 20)
+local COL_ROW = Color3.fromRGB(30, 30, 35)
+local MIN_NORMAL = Color3.fromRGB(40, 40, 45)
+local MIN_HOVER = Color3.fromRGB(25, 25, 28)
+local BTN_NORMAL = Color3.fromRGB(35, 35, 40)
+local BTN_HOVER = Color3.fromRGB(50, 52, 60)
+local TOG_ON = Color3.fromRGB(75, 80, 95)
+local TOG_OFF = Color3.fromRGB(25, 25, 28)
+
+local STROKE_CS = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 35)),
+    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(140, 145, 150)),
+    ColorSequenceKeypoint.new(0.4, Color3.fromRGB(240, 240, 245)),
+    ColorSequenceKeypoint.new(0.6, Color3.fromRGB(240, 240, 245)),
+    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(140, 145, 150)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 35)),
+})
+
+local allGrads = {}
+
+local function animStroke(parent, thick)
+    local s = Instance.new("UIStroke")
+    s.Thickness = thick or 1
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Color = Color3.new(1, 1, 1)
+    s.Parent = parent
+    
+    local g = Instance.new("UIGradient")
+    g.Color = STROKE_CS
+    g.Rotation = 45
+    g.Parent = s
+    
+    table.insert(allGrads, g)
+    return s
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "AceSniperUI"
+gui.ResetOnSpawn = false
+gui.Parent = coreGui
+
+local FULL_H = 370
+local MINI_H = 42
+
+local main = Instance.new("Frame")
+main.Size = UDim2.new(0, 290, 0, FULL_H)
+main.Position = UDim2.new(0.5, -145, 0.4, -FULL_H // 2)
+main.BackgroundColor3 = COL_BG
+main.BackgroundTransparency = 0.15
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+main.Active = true
+main.Parent = gui
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+animStroke(main, 1.5)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -40, 0, 16)
+title.Position = UDim2.new(0, 12, 0, 8)
+title.BackgroundTransparency = 1
+title.Text = "ACE AUTO FAKE PURCHASER"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 11.5
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = main
+
+local tGrad = Instance.new("UIGradient")
+tGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 200, 205)),
+    ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 205)),
+})
+tGrad.Parent = title
+
+local desc = Instance.new("TextLabel")
+desc.Size = UDim2.new(1, -40, 0, 10)
+desc.Position = UDim2.new(0, 12, 0, 22)
+desc.BackgroundTransparency = 1
+desc.Text = ".gg/Z6SJ6pbpfz"
+desc.Font = Enum.Font.GothamMedium
+desc.TextSize = 8.5
+desc.TextColor3 = Color3.fromRGB(110, 110, 115)
+desc.TextXAlignment = Enum.TextXAlignment.Left
+desc.Parent = main
+
+local helperLabel1 = Instance.new("TextLabel")
+helperLabel1.Size = UDim2.new(0, 120, 0, 14)
+helperLabel1.Position = UDim2.new(0, 12, 0, 40)
+helperLabel1.BackgroundTransparency = 1
+helperLabel1.Text = "CATEGORIES:"
+helperLabel1.Font = Enum.Font.GothamBlack
+helperLabel1.TextSize = 9.5
+helperLabel1.TextColor3 = Color3.fromRGB(150, 150, 155)
+helperLabel1.TextXAlignment = Enum.TextXAlignment.Left
+helperLabel1.Parent = main
+
+local speedBox = Instance.new("TextBox")
+speedBox.Size = UDim2.new(0, 130, 0, 14)
+speedBox.Position = UDim2.new(1, -142, 0, 40)
+speedBox.BackgroundTransparency = 1
+speedBox.Text = "SET SPEED HERE: 1"
+speedBox.Font = Enum.Font.GothamBlack
+speedBox.TextSize = 9.5
+speedBox.TextColor3 = Color3.fromRGB(140, 170, 255)
+speedBox.TextXAlignment = Enum.TextXAlignment.Right
+speedBox.ClearTextOnFocus = false
+speedBox.Parent = main
+
+speedBox.FocusLost:Connect(function(enterPressed)
+    local num = tonumber(speedBox.Text:match("[%d%.]+"))
+    if num then
+        fireSpeed = num
+        speedBox.Text = "SET SPEED HERE: " .. tostring(fireSpeed)
+    else
+        speedBox.Text = "SET SPEED HERE: " .. tostring(fireSpeed)
+    end
+end)
+
+local configFrame = Instance.new("Frame")
+configFrame.Size = UDim2.new(1, -20, 0, 88)
+configFrame.Position = UDim2.new(0, 10, 0, 56)
+configFrame.BackgroundColor3 = COL_ROW
+configFrame.BackgroundTransparency = 0.6
+configFrame.BorderSizePixel = 0
+configFrame.Parent = main
+Instance.new("UICorner", configFrame).CornerRadius = UDim.new(0, 6)
+animStroke(configFrame, 1)
+
+local configListLayout = Instance.new("UIListLayout")
+configListLayout.Padding = UDim.new(0, 5)
+configListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+configListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+configListLayout.Parent = configFrame
+
+local configPadding = Instance.new("UIPadding")
+configPadding.PaddingTop = UDim.new(0, 5)
+configPadding.Parent = configFrame
+
+local row1 = Instance.new("Frame")
+row1.Size = UDim2.new(1, 0, 0, 22)
+row1.BackgroundTransparency = 1
+row1.Parent = configFrame
+
+local row1Layout = Instance.new("UIListLayout")
+row1Layout.FillDirection = Enum.FillDirection.Horizontal
+row1Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+row1Layout.SortOrder = Enum.SortOrder.LayoutOrder
+row1Layout.Padding = UDim.new(0, 5)
+row1Layout.Parent = row1
+
+local row2 = Instance.new("Frame")
+row2.Size = UDim2.new(1, 0, 0, 22)
+row2.BackgroundTransparency = 1
+row2.Parent = configFrame
+
+local row2Layout = Instance.new("UIListLayout")
+row2Layout.FillDirection = Enum.FillDirection.Horizontal
+row2Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+row2Layout.SortOrder = Enum.SortOrder.LayoutOrder
+row2Layout.Padding = UDim.new(0, 5)
+row2Layout.Parent = row2
+
+local row3 = Instance.new("Frame")
+row3.Size = UDim2.new(1, 0, 0, 22)
+row3.BackgroundTransparency = 1
+row3.Parent = configFrame
+
+local row3Layout = Instance.new("UIListLayout")
+row3Layout.FillDirection = Enum.FillDirection.Horizontal
+row3Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+row3Layout.SortOrder = Enum.SortOrder.LayoutOrder
+row3Layout.Padding = UDim.new(0, 5)
+row3Layout.Parent = row3
+
+local function createToggle(label, targetKey, parentRow)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 83, 0, 22)
+    btn.BackgroundColor3 = selectedCategories[targetKey] and TOG_ON or TOG_OFF
+    btn.Text = label
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 8
+    btn.TextColor3 = selectedCategories[targetKey] and Color3.new(1, 1, 1) or Color3.fromRGB(160, 160, 165)
+    btn.BorderSizePixel = 0
+    btn.Parent = parentRow
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    animStroke(btn, 1)
+
+    btn.MouseButton1Click:Connect(function()
+        selectedCategories[targetKey] = not selectedCategories[targetKey]
+        tweenService:Create(btn, TweenInfo.new(0.12), {
+            BackgroundColor3 = selectedCategories[targetKey] and TOG_ON or TOG_OFF,
+            TextColor3 = selectedCategories[targetKey] and Color3.new(1, 1, 1) or Color3.fromRGB(160, 160, 165)
+        }):Play()
+    end)
+end
+
+createToggle("ACCESSORIES", "Accessories", row1)
+createToggle("CLASSIC CLOTHES", "ClassicClothing", row1)
+createToggle("3D / LAYERED", "LayeredClothing", row1)
+createToggle("GEARS", "Gears", row2)
+createToggle("BUNDLES", "BundlesPackages", row2)
+
+local skipBtnToggle = Instance.new("TextButton")
+skipBtnToggle.Size = UDim2.new(0, 259, 0, 22)
+skipBtnToggle.BackgroundColor3 = TOG_OFF
+skipBtnToggle.Text = "SKIP FREE ITEMS"
+skipBtnToggle.Font = Enum.Font.GothamBold
+skipBtnToggle.TextSize = 8.5
+skipBtnToggle.TextColor3 = Color3.fromRGB(160, 160, 165)
+skipBtnToggle.BorderSizePixel = 0
+skipBtnToggle.Parent = row3
+Instance.new("UICorner", skipBtnToggle).CornerRadius = UDim.new(0, 4)
+animStroke(skipBtnToggle, 1)
+
+skipBtnToggle.MouseButton1Click:Connect(function()
+    skipFreeItems = not skipFreeItems
+    tweenService:Create(skipBtnToggle, TweenInfo.new(0.12), {
+        BackgroundColor3 = skipFreeItems and TOG_ON or TOG_OFF,
+        TextColor3 = skipFreeItems and Color3.new(1, 1, 1) or Color3.fromRGB(160, 160, 165)
+    }):Play()
+end)
+
+local helperLabel2 = Instance.new("TextLabel")
+helperLabel2.Size = UDim2.new(1, -20, 0, 14)
+helperLabel2.Position = UDim2.new(0, 12, 0, 152)
+helperLabel2.BackgroundTransparency = 1
+helperLabel2.Text = "CONTROLS:"
+helperLabel2.Font = Enum.Font.GothamBlack
+helperLabel2.TextSize = 9.5
+helperLabel2.TextColor3 = Color3.fromRGB(150, 150, 155)
+helperLabel2.TextXAlignment = Enum.TextXAlignment.Left
+helperLabel2.Parent = main
+
+local scanBtn = Instance.new("TextButton")
+scanBtn.Size = UDim2.new(0, 132, 0, 26)
+scanBtn.Position = UDim2.new(0, 10, 0, 168)
+scanBtn.BackgroundColor3 = BTN_NORMAL
+scanBtn.Text = "START FAKE PURCHASE"
+scanBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
+scanBtn.Font = Enum.Font.GothamBlack
+scanBtn.TextSize = 9
+scanBtn.BorderSizePixel = 0
+scanBtn.AutoButtonColor = false
+scanBtn.Parent = main
+Instance.new("UICorner", scanBtn).CornerRadius = UDim.new(0, 5)
+animStroke(scanBtn, 1)
+
+local scanScale = Instance.new("UIScale")
+scanScale.Scale = 1
+scanScale.Parent = scanBtn
+
+local stopBtn = Instance.new("TextButton")
+stopBtn.Size = UDim2.new(0, 132, 0, 26)
+stopBtn.Position = UDim2.new(1, -142, 0, 168)
+stopBtn.BackgroundColor3 = BTN_NORMAL
+stopBtn.Text = "STOP AUTO PURCHASE"
+stopBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
+stopBtn.Font = Enum.Font.GothamBlack
+stopBtn.TextSize = 9
+stopBtn.BorderSizePixel = 0
+stopBtn.AutoButtonColor = false
+stopBtn.Parent = main
+Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0, 5)
+animStroke(stopBtn, 1)
+
+local stopScale = Instance.new("UIScale")
+stopScale.Scale = 1
+stopScale.Parent = stopBtn
+
+scanBtn.MouseEnter:Connect(function()
+    if not isScanning then
+        tweenService:Create(scanBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play()
+    end
+end)
+
+scanBtn.MouseLeave:Connect(function()
+    if not isScanning then
+        tweenService:Create(scanBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_NORMAL}):Play()
+    end
+end)
+
+stopBtn.MouseEnter:Connect(function()
+    tweenService:Create(stopBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_HOVER}):Play()
+end)
+
+stopBtn.MouseLeave:Connect(function()
+    tweenService:Create(stopBtn, TweenInfo.new(0.15), {BackgroundColor3 = BTN_NORMAL}):Play()
+end)
+
+local LogContainer = Instance.new("ScrollingFrame")
+LogContainer.Size = UDim2.new(1, -20, 1, -210)
+LogContainer.Position = UDim2.new(0, 10, 0, 200)
+LogContainer.BackgroundColor3 = COL_ROW
+LogContainer.BackgroundTransparency = 0.4
+LogContainer.BorderSizePixel = 0
+LogContainer.ScrollBarThickness = 4
+LogContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+LogContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+LogContainer.Parent = main
+Instance.new("UICorner", LogContainer).CornerRadius = UDim.new(0, 6)
+animStroke(LogContainer, 1)
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 3)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = LogContainer
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingLeft = UDim.new(0, 6)
+UIPadding.PaddingTop = UDim.new(0, 4)
+UIPadding.Parent = LogContainer
+
+local minimized = false
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.new(0, 22, 0, 22)
+minBtn.Position = UDim2.new(1, -30, 0, 8)
+minBtn.BackgroundColor3 = MIN_NORMAL
+minBtn.Text = "-"
+minBtn.TextColor3 = Color3.new(1, 1, 1)
+minBtn.Font = Enum.Font.GothamBlack
+minBtn.TextSize = 13
+minBtn.BorderSizePixel = 0
+minBtn.AutoButtonColor = false
+minBtn.Parent = main
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 5)
+animStroke(minBtn, 1)
+
+local minScale = Instance.new("UIScale")
+minScale.Scale = 1
+minScale.Parent = minBtn
+
+minBtn.MouseEnter:Connect(function()
+    tweenService:Create(minBtn, TweenInfo.new(0.15), {BackgroundColor3 = MIN_HOVER}):Play()
+end)
+
+minBtn.MouseLeave:Connect(function()
+    tweenService:Create(minBtn, TweenInfo.new(0.15), {BackgroundColor3 = MIN_NORMAL}):Play()
+end)
+
+minBtn.MouseButton1Down:Connect(function()
+    tweenService:Create(minBtn, TweenInfo.new(0.05), {BackgroundColor3 = Color3.fromRGB(15, 15, 18)}):Play()
+    tweenService:Create(minScale, TweenInfo.new(0.07, Enum.EasingStyle.Linear), {Scale = 0.93}):Play()
+    task.delay(0.07, function()
+        tweenService:Create(minBtn, TweenInfo.new(0.18), {BackgroundColor3 = MIN_NORMAL}):Play()
+        tweenService:Create(minScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
+end)
+
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    
+    if minimized then
+        helperLabel1.Visible = false
+        speedBox.Visible = false
+        configFrame.Visible = false
+        helperLabel2.Visible = false
+        scanBtn.Visible = false
+        stopBtn.Visible = false
+        LogContainer.Visible = false
+    end
+    
+    local tween = tweenService:Create(main, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {
+        Size = minimized and UDim2.new(0, 290, 0, MINI_H) or UDim2.new(0, 290, 0, FULL_H)
+    })
+    
+    tween.Completed:Connect(function()
+        if not minimized then
+            helperLabel1.Visible = true
+            speedBox.Visible = true
+            configFrame.Visible = true
+            helperLabel2.Visible = true
+            scanBtn.Visible = true
+            stopBtn.Visible = true
+            LogContainer.Visible = true
+        end
+    end)
+    
+    tween:Play()
+    minBtn.Text = minimized and "+" or "-"
+end)
+
+local function AddLog(text, color)
+    local LogFrame = Instance.new("TextLabel")
+    LogFrame.Size = UDim2.new(1, -6, 0, 15)
+    LogFrame.BackgroundTransparency = 1
+    LogFrame.Text = string.format("[%s] %s", os.date("%X"), text)
+    LogFrame.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+    LogFrame.Font = Enum.Font.Code
+    LogFrame.TextSize = 9.5
+    LogFrame.TextXAlignment = Enum.TextXAlignment.Left
+    LogFrame.Parent = LogContainer
+    
+    LogContainer.CanvasPosition = Vector2.new(0, LogContainer.AbsoluteCanvasSize.Y)
+end
+
+local function PerformInventoryScan()
+    if isScanning then return end
+    isScanning = true
+    getgenv().UGCs = {}
+    
+    tweenService:Create(scanBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = Color3.fromRGB(20, 20, 22),
+        TextColor3 = Color3.fromRGB(100, 100, 105)
+    }):Play()
+    scanBtn.Text = "SCANNING PRESET..."
+
+    local LP = Players.LocalPlayer
+    local pageIndex = 1
+    AddLog("SCRIPT: CHECKING INVENTORY...", Color3.fromRGB(220, 220, 225))
+
+    local privacyUrl = string.format(
+        "https://inventory.roblox.com/v2/users/%s/inventory?assetTypes=Gear&limit=10",
+        LP.UserId
+    )
+    local pSuccess, pResponse = pcall(function()
+        return request({Url = privacyUrl, Method = "GET"})
+    end)
+    
+    if pSuccess and pResponse.Body then
+        if pResponse.StatusCode == 403 or (
+            string.find(pResponse.Body, "errors") and
+            string.find(pResponse.Body, "is private")
+        ) then
+            AddLog("SCRIPT: YOUR INVENTORY IS PRIVATE!", Color3.fromRGB(255, 50, 50))
+            AddLog("SCRIPT: MAKE YOUR INVENTORY PUBLIC", Color3.fromRGB(255, 120, 120))
+            scanBtn.Text = "START FAKE PURCHASE"
+            tweenService:Create(scanBtn, TweenInfo.new(0.15), {
+                BackgroundColor3 = BTN_NORMAL,
+                TextColor3 = Color3.fromRGB(240, 240, 245)
+            }):Play()
+            isScanning = false
+            return false
+        end
+    end
+
+    local scanTargets = {}
+    if selectedCategories.Accessories then
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v2/users/%s/inventory?assetTypes=HairAccessory,FaceAccessory,NeckAccessory,ShoulderAccessory,FrontAccessory,BackAccessory,WaistAccessory,Hat&limit=100&cursor=%s",
+            Key = "Accessories"
+        })
+    end
+    if selectedCategories.ClassicClothing then
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v2/users/%s/inventory?assetTypes=Shirt,Pants,TShirt&limit=100&cursor=%s",
+            Key = "ClassicClothing"
+        })
+    end
+    if selectedCategories.LayeredClothing then
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v2/users/%s/inventory?assetTypes=JacketAccessory,SweaterAccessory,PantsAccessory,ShirtAccessory&limit=100&cursor=%s",
+            Key = "LayeredClothing"
+        })
+    end
+    if selectedCategories.Gears then
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v2/users/%s/inventory?assetTypes=Gear&limit=100&cursor=%s",
+            Key = "Gears"
+        })
+    end
+    if selectedCategories.BundlesPackages then
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v1/users/%s/assets/sub-type/AvatarAnimation?limit=100&cursor=%s",
+            Key = "BundlesPackages"
+        })
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v1/users/%s/assets/sub-type/Outfit?limit=100&cursor=%s",
+            Key = "BundlesPackages"
+        })
+        table.insert(scanTargets, {
+            Url = "https://inventory.roblox.com/v1/users/%s/assets/sub-type/Package?limit=100&cursor=%s",
+            Key = "BundlesPackages"
+        })
+        table.insert(scanTargets, {
+            Url = "https://catalog.roblox.com/v1/users/%s/bundles?limit=100&cursor=%s",
+            Key = "BundlesPackages"
+        })
+    end
+
+    if #scanTargets == 0 then
+        AddLog("SCRIPT: SELECT AT LEAST ONE CATEGORY FIRST!", Color3.fromRGB(255, 100, 100))
+        scanBtn.Text = "START FAKE PURCHASE"
+        tweenService:Create(scanBtn, TweenInfo.new(0.15), {
+            BackgroundColor3 = BTN_NORMAL,
+            TextColor3 = Color3.fromRGB(240, 240, 245)
+        }):Play()
+        isScanning = false
+        return false
+    end
+
+    for _, target in ipairs(scanTargets) do
+        local cursor = ""
+        repeat
+            local targetUrl = string.format(target.Url, LP.UserId, cursor)
+            local success, response = pcall(function()
+                return request({Url = targetUrl, Method = "GET"})
+            end)
+
+            if success and response.Body then
+                local data = HttpService:JSONDecode(response.Body)
+                if data.data then
+                    local itemsToAnalyze = {}
+                    for _, v in pairs(data.data) do
+                        local id = v.assetId or v.id
+                        if id then
+                            table.insert(itemsToAnalyze, {Id = id, Raw = v})
+                        end
+                    end
+
+                    for _, item in ipairs(itemsToAnalyze) do
+                        local keepItem = true
+                        if skipFreeItems then
+                            local infoSuccess, info = pcall(function()
+                                return MarketplaceService:GetProductInfo(
+                                    item.Id,
+                                    target.Key == "BundlesPackages" and Enum.InfoType.Bundle or Enum.InfoType.Asset
+                                )
+                            end)
+                            
+                            if infoSuccess and info then
+                                local isFree = (
+                                    info.PriceInRobux == 0 or
+                                    info.IsForSale == false or
+                                    info.CanBePurchased == false
+                                )
+                                if isFree then
+                                    keepItem = false
+                                end
+                            else
+                                keepItem = false
+                            end
+                        end
+
+                        if keepItem then
+                            table.insert(getgenv().UGCs, {Id = item.Id, Type = target.Key})
+                        end
+                    end
+
+                    AddLog("SCANNING: PAGE " .. pageIndex .. " SCANNED SUCCESSFULLY", Color3.fromRGB(0, 200, 255))
+                    pageIndex = pageIndex + 1
+                end
+                cursor = data.nextPageCursor or ""
+            else
+                task.wait(0.5)
+            end
+            task.wait(0.1)
+        until cursor == ""
+    end
+
+    AddLog("SCRIPT: TOTAL ITEMS SCANNED: " .. #getgenv().UGCs, Color3.fromRGB(0, 255, 0))
+    scanBtn.Text = "START FAKE PURCHASE"
+    tweenService:Create(scanBtn, TweenInfo.new(0.15), {
+        BackgroundColor3 = BTN_NORMAL,
+        TextColor3 = Color3.fromRGB(240, 240, 245)
+    }):Play()
+    isScanning = false
+    isLoopRunning = true
+    return true
+end
+
+scanBtn.MouseButton1Down:Connect(function()
+    if isScanning then return end
+    tweenService:Create(scanScale, TweenInfo.new(0.05, Enum.EasingStyle.Linear), {Scale = 0.95}):Play()
+    task.delay(0.05, function()
+        tweenService:Create(scanScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
+end)
+
+scanBtn.MouseButton1Click:Connect(function()
+    if isScanning then return end
+    task.spawn(PerformInventoryScan)
+end)
+
+stopBtn.MouseButton1Down:Connect(function()
+    tweenService:Create(stopScale, TweenInfo.new(0.05, Enum.EasingStyle.Linear), {Scale = 0.95}):Play()
+    task.delay(0.05, function()
+        tweenService:Create(stopScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end)
+end)
+
+stopBtn.MouseButton1Click:Connect(function()
+    if isLoopRunning then
+        isLoopRunning = false
+        AddLog("SCRIPT: FAKE PURCHASER STOPPED", Color3.fromRGB(255, 80, 80))
+    end
+end)
+
+task.spawn(function()
+    local LP = Players.LocalPlayer
+    local loopPageIndex = 1
+    AddLog("SCRIPT: FAKE PURCHASER...", Color3.fromRGB(255, 255, 0))
+    AddLog("SCRIPT: SELECT ANY CATEGORIES YOU WANT FIRE", Color3.fromRGB(200, 200, 205))
+
+    while true do
+        if isLoopRunning then
+            local queueSize = #getgenv().UGCs
+            if queueSize > 0 then
+                for i = 1, queueSize do
+                    if not isLoopRunning then break end
+                    
+                    local itemData = getgenv().UGCs[i]
+                    if not itemData then continue end
+                    
+                    if not selectedCategories[itemData.Type] then
+                        continue
+                    end
+                    
+                    local success, err = pcall(function()
+                        MarketplaceService:SignalPromptPurchaseFinished(LP, itemData.Id, true)
+                    end)
+
+                    if success then
+                        AddLog("SCRIPT: ITEM ID FIRED " .. itemData.Id, Color3.fromRGB(150, 255, 150))
+                    else
+                        AddLog("SCRIPT: ITEM ID BLOCKED " .. itemData.Id, Color3.fromRGB(255, 100, 100))
+                    end
+                    
+                    if fireSpeed > 0 then
+                        task.wait(fireSpeed)
+                    else
+                        runService.Heartbeat:Wait()
+                    end
+                end
+                if isLoopRunning then
+                    AddLog("SCRIPT: SCANNED SUCCESSFULLY", Color3.fromRGB(200, 200, 200))
+                    isLoopRunning = false
+                end
+            else
+                task.wait(1)
+            end
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+do
+    local dragging, dragStart, startPos = false, nil, nil
+    main.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            local abs = main.AbsolutePosition
+            main.Position = UDim2.new(0, abs.X, 0, abs.Y)
+            dragging = true
+            dragStart = i.Position
+            startPos = main.Position
+        end
+    end)
+    
+    userInputService.InputChanged:Connect(function(i)
+        if not dragging then return end
+        if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+            local d = i.Position - dragStart
+            local vp = workspace.CurrentCamera.ViewportSize
+            local gs = main.AbsoluteSize
+            main.Position = UDim2.new(
+                0,
+                math.clamp(startPos.X.Offset + d.X, 0, vp.X - gs.X),
+                0,
+                math.clamp(startPos.Y.Offset + d.Y, 0, vp.Y - gs.Y)
+            )
+        end
+    end)
+    
+    userInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+runService.RenderStepped:Connect(function()
+    local off = Vector2.new(math.sin(tick() * 2.8), 0)
+    for _, g in ipairs(allGrads) do
+        g.Offset = off
+    end
+end)
